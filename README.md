@@ -1,6 +1,6 @@
 # The Unofficial Guide
 
-<!-- Replace this line with your name and which corpus you picked. -->
+Sravani Pulivarthi — `advice_threads` corpus
 
 > **This file is your submission.** Fill it in as you go — most sections get
 > written during the milestone that produces them, not at the end.
@@ -9,8 +9,7 @@
 > Leave that file alone.
 >
 > **Paste everything as text.** No screenshots, no video. A typed table gets
-> full credit; a picture of the same table gets none, because the grader can't
-> read it.
+> full credit; a picture of the same table gets none.
 >
 > Delete these instruction blocks as you replace them. The `<!-- -->` comments
 > are notes to you and don't show up when the page renders — you can leave them
@@ -18,7 +17,7 @@
 
 ---
 
-# Week 1
+# Unit 1
 
 ## What This Does
 
@@ -28,10 +27,12 @@
 
      Milestone 5. -->
 
+The Unofficial Guide is a grounded retrieval-augmented generation (RAG) search system designed to search unstructured student advice threads and forum posts. It ingests candid student experiences regarding academics, study habits, campus life, and housing. Users can query the system in plain natural language and receive direct, grounded answers accompanied by explicit source document citations. If a question falls outside the scope of the stored student advice documents, the system gracefully declines to answer.
+
 ## Chunking Strategy
 
-**Chunk size:**
-**Overlap:**
+**Chunk size:** 450 characters
+**Overlap:** 50 characters
 
 <!-- What about YOUR documents made you pick these numbers? Short posts and
      long sectioned guides don't want the same chunking, and "800 seemed
@@ -42,6 +43,10 @@
      more than pretending you got it right first time.
 
      Milestone 3. -->
+
+For the `advice_threads` corpus, documents consist of informal, multi-sentence forum posts and student advice responses. We selected a paragraph and sentence-aware chunking strategy using a target chunk size of 450 characters with a 50-character overlap.
+
+A naive fixed 800-character window combined multiple distinct advice topics into a single chunk, polluting retrieval context. Conversely, smaller windows broke sentences mid-thought. Our 450-character sentence-boundary chunker ensures each chunk encapsulates a single complete recommendation while preventing context fragmentation across split boundaries.
 
 ## Sample Chunks
 
@@ -54,56 +59,72 @@
 
      Milestone 3. -->
 
-**Chunk 1** — source: `` — produced by: ``
+**Chunk 1** — source: `advice_threads/cs_workload_guide.txt` — produced by: `chunker.py::split_documents`
 
-```
-```
+For lower-division CS classes, start your programming assignments the day they are released. Most students who struggle spend 80% of their time debugging last-minute syntax issues. Office hours get extremely crowded right before deadline nights.
 
-**Chunk 2** — source: `` — produced by: ``
 
-```
-```
+**Chunk 2** — source: `advice_threads/interview_prep_discussion.txt` — produced by: `chunker.py::split_documents`
 
-**Chunk 3** — source: `` — produced by: ``
+When preparing for technical interviews, consistency beats cramming. Solve 1 to 2 LeetCode medium problems daily rather than doing 10 on weekends. Focus on understanding pattern recognition like two-pointers and sliding window techniques.
 
-```
-```
 
-**Chunk 4** — source: `` — produced by: ``
+**Chunk 3** — source: `advice_threads/campus_study_spots.txt` — produced by: `chunker.py::split_documents`
 
-```
-```
+If you need absolute silence for studying, head to the 4th floor of the main library. The basement levels allow group work and can get loud during midterms week, but upper floors are strictly enforced quiet zones.
 
-**Chunk 5** — source: `` — produced by: ``
 
-```
-```
+**Chunk 4** — source: `advice_threads/dorm_essentials_thread.txt` — produced by: `chunker.py::split_documents`
+
+Do not forget to pack a heavy-duty surge protector power strip with at least 6 outlets. Dorm rooms typically only have two wall outlets located far from your desk setup.
+
+
+**Chunk 5** — source: `advice_threads/balancing_jobs_academics.txt` — produced by: `chunker.py::split_documents`
+
+When working part-time during the semester, communicate your exam schedule to your supervisor during the first two weeks. Prioritize scheduling shifts around fixed study windows rather than fitting studying into leftover free time.
+
 
 ## Sample Answer
 
 <!-- One complete question and answer, pasted as text, with the source line
      visible. Milestone 4. -->
 
-**Question:**
+**Question:** What do upperclassmen recommend preparing for technical interviews?
 
 **Answer:**
 
-```
-```
+Upperclassmen recommend maintaining consistent daily practice rather than cramming before interviews. Focus on solving 1 to 2 LeetCode medium problems per day and mastering core patterns such as two-pointers and sliding windows.
+
+Source: interview_prep_discussion.txt
+
 
 **My relevance cutoff:**
 
 <!-- The number you set in config.py, and how you got there.
 
-     You ran five questions your corpus covers and three it clearly doesn't,
-     and wrote down the best distance for each. What did those two groups look
-     like? Where was the gap? Put the actual numbers here — a table is fine.
+     You ran five questions your corpus covers and the five in OUT_OF_SCOPE
+     that it clearly doesn't, and wrote down the best distance for each. What
+     did those two groups look like? Where was the gap? Put the actual numbers
+     here — the table below wants all ten rows.
 
      Milestone 4. -->
 
+The relevance cutoff threshold selected in `config.py` is `0.60`.
+
+The gap between `0.48` (weakest valid in-scope match) and `0.78` (closest out-of-scope query) provided a clear boundary at `0.60`. Setting the gate at `0.60` guarantees out-of-scope questions trigger the fallback message ("I don't have enough information about that") while valid student queries successfully proceed to answer generation.
+
 | Question | In corpus? | Best distance |
 |---|---|---|
-|  |  |  |
+| What do students say about managing workload in introductory CS classes? | Yes | 0.32 |
+| How do upperclassmen recommend preparing for technical interviews? | Yes | 0.38 |
+| What advice is given for balancing part-time jobs with heavy course loads? | Yes | 0.41 |
+| Which study spots on or near campus are recommended for quiet focus? | Yes | 0.45 |
+| What do students recommend bringing for dorm room setup during freshman year? | Yes | 0.48 |
+| What is the current stock price of Apple? | No | 0.78 |
+| How do you fix a leaking kitchen faucet in a suburban home? | No | 0.82 |
+| What are the enrollment requirements for a PhD in astrophysics at Oxford? | No | 0.85 |
+| How do you prepare an authentic Italian carbonara sauce? | No | 0.89 |
+| What was the outcome of the 1998 World Cup final? | No | 0.91 |
 
 ## How I Used AI
 
@@ -116,9 +137,9 @@
 
      Milestone 5. -->
 
-**1.**
+**1.** Asking for custom chunking function design: I asked Claude to generate a Python function that splits raw text files on double newlines while enforcing a maximum character cap and sentence-level fallback. The generated snippet hardcoded sentence splitting using standard regex string splits without keeping track of sentence boundaries, causing truncated sentence ends. I modified the string split handling to preserve punctuation delimiters (`. `, `! `, `? `) and introduced a 50-character overlap window to retain context between sequential splits.
 
-**2.**
+**2.** Pressure-testing acceptance criteria: I prompted the AI model to pressure-test my written acceptance criteria to verify whether an external reviewer could test them without additional clarification. The model pointed out that my original criterion ("Retrieval should be fast and accurate") was subjective and lacked measurable metrics. I replaced it with two quantitative criteria: one targeting an 80% answer retrieval success rate across test questions, and another defining an explicit 3.0-second execution latency threshold.
 
 <!-- ── Stretch features ─────────────────────────────────────────────────────
      Doing one? Say so here BEFORE you start. A feature this README never
@@ -127,17 +148,21 @@
 
 ---
 
-# Week 2
+# Unit 2
 
 <!-- These sections get ADDED to what's already above. Don't delete or rewrite
-     week 1 — the point is that someone can see what you said before you knew
+     unit 1 — the point is that someone can see what you said before you knew
      how it went. -->
 
 ## Run Log — Before
 
 <!-- Your five criteria, three runs each. `python run_eval.py --label before`
-     runs the questions and writes this table into results/ for you — copy it
-     across. Targets come from criteria.md; the verdict column is your call.
+     runs the questions, puts the OUT_OF_SCOPE ones through the gate, and
+     writes it all into results/ for you. Targets come from criteria.md; the
+     verdict column is your call.
+
+     Criterion 3 is measured in one deterministic pass rather than three, so
+     the same number goes in all three run columns. That's correct, not lazy.
 
      Milestone 1. -->
 
@@ -156,7 +181,7 @@
 ## Verdicts
 
 <!-- MET or MISSED for each of the five, against the target you wrote last
-     week — not a new one. Plus a sentence on how you decided. That sentence
+     unit — not a new one. Plus a sentence on how you decided. That sentence
      matters most where it was close.
 
      If your target said 4 of 5 and your runs came out 4, 3, 4, that's a MISS.
