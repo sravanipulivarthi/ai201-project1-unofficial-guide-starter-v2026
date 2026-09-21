@@ -50,6 +50,13 @@ THRESHOLD = 0.6
 # Embeddings run on your own machine and cost no API quota.
 # Only generation calls out to a service.
 
+# This is the model Chroma bundles, and leaving it alone is the fast path: it
+# downloads about 80 MB from Chroma's own CDN and needs nothing else installed.
+#
+# Setting it to any other name — unit 2's "try a second embedding model"
+# stretch option — switches to loading that model from Hugging Face instead,
+# which needs `pip install 'sentence-transformers>=3.4,<3.5'` first. store.py
+# says so with a real error message rather than a stack trace if you forget.
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 MODEL = os.getenv("AI201_MODEL", "gemini-3.5-flash-lite")
 
@@ -57,10 +64,6 @@ MODEL = os.getenv("AI201_MODEL", "gemini-3.5-flash-lite")
 # ─── Rate limiting and quota guards ──────────────────────────────────────────
 # You should not need to touch these. They exist so that a runaway loop costs
 # you a warning instead of your whole day's allowance.
-#
-# ⚠️ STAFF: confirm REQUESTS_PER_MINUTE against the AI Studio rate-limit
-# dashboard for a real student account before the term. Google no longer
-# publishes free-tier limits; this value is an assumption.
 
 REQUESTS_PER_MINUTE = 30       # outgoing calls the limiter will allow per minute
 SESSION_REQUEST_BUDGET = 300   # stop and warn rather than draining the daily quota
@@ -87,7 +90,7 @@ def collection_name(name: str | None = None, variant: str = "default") -> str:
     Name of the vector-store collection for a corpus.
 
     `variant` lets you index the same corpus two different ways and query both
-    without deleting anything — you'll want that in week 2 when you compare
+    without deleting anything — you'll want that in unit 2 when you compare
     chunking strategies.
 
     Chroma is fussy about collection names: 3 to 63 characters, starting and
