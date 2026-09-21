@@ -51,7 +51,7 @@ def fallback_split(
     The starter's original chunker. Fixed-size character windows with overlap.
 
     Keep this function. Milestone 3's stop rule points back at it, and having
-    something to compare your own strategy against is useful in week 2.
+    something to compare your own strategy against is useful in unit 2.
     """
     chunk_size = chunk_size or config.CHUNK_SIZE
     overlap = overlap or config.CHUNK_OVERLAP
@@ -82,23 +82,70 @@ def fallback_split(
 
 def split_documents(documents: list[Document]) -> list[Chunk]:
     """
-    Split documents into chunks. ⚠️ REPLACE THE BODY OF THIS IN MILESTONE 3.
-
-    Right now it just calls the fallback. That is the plain, generic behaviour
-    the brief is talking about.
-
-    When you write your own strategy, set `produced_by` to
-    "chunker.py::split_documents" so your README's Sample Chunks section names
-    the right function. `app.py chunks` prints that string for you.
-
-    Things worth thinking about before you write any code:
-      - Are your documents short posts or long guides?
-      - Is the useful information in one sentence, or spread over a paragraph?
-      - Would splitting on paragraph breaks keep more thoughts intact than
-        splitting on a character count?
+    Splits documents into logical chunks based on paragraph and sentence boundaries.
     """
-    return fallback_split(documents)
+    chunk_size = 450
+    overlap = 50
+    chunks: list[Chunk] = []
 
+    for doc in documents:
+        paragraphs = doc.text.split("\n\n")
+        index = 0
+
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                continue
+
+            # If the paragraph fits, keep it as a chunk
+            if len(para) <= chunk_size:
+                chunks.append(
+                    Chunk(
+                        text=para,
+                        source=doc.source,
+                        index=index,
+                        produced_by="chunker.py::split_documents",
+                    )
+                )
+                index += 1
+            else:
+                # Split longer paragraphs into sentence chunks with overlap
+                sentences = (
+                    para.replace("! ", "!|")
+                    .replace("? ", "?|")
+                    .replace(". ", ".|")
+                    .split("|")
+                )
+                current_chunk = ""
+
+                for sentence in sentences:
+                    if len(current_chunk) + len(sentence) <= chunk_size:
+                        current_chunk += sentence + " "
+                    else:
+                        if current_chunk.strip():
+                            chunks.append(
+                                Chunk(
+                                    text=current_chunk.strip(),
+                                    source=doc.source,
+                                    index=index,
+                                    produced_by="chunker.py::split_documents",
+                                )
+                            )
+                            index += 1
+                        current_chunk = sentence + " "
+
+                if current_chunk.strip():
+                    chunks.append(
+                        Chunk(
+                            text=current_chunk.strip(),
+                            source=doc.source,
+                            index=index,
+                            produced_by="chunker.py::split_documents",
+                        )
+                    )
+                    index += 1
+
+    return chunks
 
 def describe(chunks: list[Chunk]) -> str:
     """A one-line summary, printed after indexing."""
